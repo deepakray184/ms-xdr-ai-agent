@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 ### 2. Configure Environment (`.env`)
 
-Edit `.env` to configure connectivity:
+Edit `.env` to configure connectivity and your preferred AI engine:
 
 ```ini
 # Microsoft Entra ID (Azure AD) App Registration
@@ -63,10 +63,33 @@ AZURE_TENANT_ID=your-azure-tenant-id-here
 AZURE_CLIENT_ID=your-azure-client-id-here
 AZURE_CLIENT_SECRET=your-azure-client-secret-here
 
-# AI Provider ("gemini", "openai", "azure_openai", or "heuristic")
+# Choose AI Provider: "gemini", "claude", "openai", "copilot", "azure_openai", "ollama", or "heuristic"
 LLM_PROVIDER=gemini
-GEMINI_API_KEY=your-gemini-api-key-here
+
+# 1. Google Gemini (Default)
+GEMINI_API_KEY=your-gemini-key
 GEMINI_MODEL=gemini-2.5-flash
+
+# 2. Anthropic Claude (claude-3-7-sonnet, claude-3-5-sonnet)
+# LLM_PROVIDER=claude
+# ANTHROPIC_API_KEY=your-anthropic-key
+# ANTHROPIC_MODEL=claude-3-7-sonnet-20250219
+
+# 3. OpenAI / ChatGPT (gpt-4o, o3-mini)
+# LLM_PROVIDER=openai
+# OPENAI_API_KEY=your-openai-key
+# OPENAI_MODEL=gpt-4o
+
+# 4. Microsoft Copilot / Azure OpenAI (Enterprise SecOps)
+# LLM_PROVIDER=copilot
+# AZURE_OPENAI_API_KEY=your-azure-key
+# AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+# AZURE_OPENAI_DEPLOYMENT=gpt-4o
+
+# 5. Local Offline Models via Ollama (Llama 3.3, DeepSeek-R1)
+# LLM_PROVIDER=ollama
+# OLLAMA_BASE_URL=http://localhost:11434/v1
+# OLLAMA_MODEL=llama3.3
 ```
 
 > **Note:** If Azure credentials or AI keys are not yet provided, the agent will **automatically run in Simulation/Mock Mode** using realistic Defender XDR incident schemas and the built-in Expert Heuristic engine. You can test immediately!

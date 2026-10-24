@@ -72,24 +72,39 @@ class AISOCAnalyzer:
         self.provider = settings.LLM_PROVIDER
         self._gemini_client = None
         self._openai_client = None
+        self._anthropic_client = None
 
     def analyze_alert(self, alert: DefenderAlert) -> AIAnalysisReport:
         """Analyzes a Defender XDR alert using LLM or Expert Heuristic engine."""
-        # 1. Try Gemini if configured
+        # 1. Google Gemini
         if self.provider == "gemini" and settings.GEMINI_API_KEY and not settings.GEMINI_API_KEY.startswith("your-"):
             try:
                 return self._analyze_with_gemini(alert)
             except Exception as e:
                 logger.warning(f"Gemini analysis failed ({e}), falling back to Expert Heuristic Analyst.")
 
-        # 2. Try OpenAI / Azure OpenAI if configured
-        elif self.provider in ("openai", "azure_openai") and (settings.OPENAI_API_KEY or settings.AZURE_OPENAI_API_KEY):
+        # 2. Anthropic Claude
+        elif self.provider in ("claude", "anthropic") and settings.ANTHROPIC_API_KEY and not settings.ANTHROPIC_API_KEY.startswith("your-"):
+            try:
+                return self._analyze_with_anthropic(alert)
+            except Exception as e:
+                logger.warning(f"Claude analysis failed ({e}), falling back to Expert Heuristic Analyst.")
+
+        # 3. OpenAI, ChatGPT, Azure OpenAI & Microsoft Copilot API
+        elif self.provider in ("openai", "chatgpt", "azure_openai", "copilot", "ms_copilot") and (settings.OPENAI_API_KEY or settings.AZURE_OPENAI_API_KEY):
             try:
                 return self._analyze_with_openai(alert)
             except Exception as e:
-                logger.warning(f"OpenAI analysis failed ({e}), falling back to Expert Heuristic Analyst.")
+                logger.warning(f"OpenAI/Copilot analysis failed ({e}), falling back to Expert Heuristic Analyst.")
 
-        # 3. Fallback: Expert SOC Heuristic Engine (deterministic, offline-ready, deep inspection)
+        # 4. Ollama / Local Models
+        elif self.provider in ("ollama", "local", "custom"):
+            try:
+                return self._analyze_with_ollama(alert)
+            except Exception as e:
+                logger.warning(f"Ollama/Local analysis failed ({e}), falling back to Expert Heuristic Analyst.")
+
+        # 5. Fallback: Expert SOC Heuristic Engine (deterministic, offline-ready, deep inspection)
         return self._analyze_with_expert_heuristics(alert)
 
     def _build_alert_context(self, alert: DefenderAlert) -> str:
@@ -152,19 +167,21 @@ Raw Evidence Snippets:
         """Invokes OpenAI or Azure OpenAI model."""
         from openai import OpenAI, AzureOpenAI
 
-        if settings.LLM_PROVIDER == "azure_openai":
+        if settings.LLM_PROVIDER in ("azure_openai", "copilot", "ms_copilot"):
             client = AzureOpenAI(
                 api_key=settings.AZURE_OPENAI_API_KEY,
                 api_version=settings.AZURE_OPENAI_API_VERSION,
                 azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
             )
             model_name = settings.AZURE_OPENAI_DEPLOYMENT
+            brand = "Azure OpenAI / Copilot"
         else:
             client = OpenAI(
                 api_key=settings.OPENAI_API_KEY,
                 base_url=settings.OPENAI_BASE_URL,
             )
             model_name = settings.OPENAI_MODEL
+            brand = "OpenAI / ChatGPT"
 
         prompt = self._build_alert_context(alert)
         messages = [
@@ -180,7 +197,50 @@ Raw Evidence Snippets:
         )
 
         content = response.choices[0].message.content or "{}"
-        return self._parse_llm_json_response(content, alert, model_name=f"OpenAI ({model_name})")
+        return self._parse_llm_json_response(content, alert, model_name=f"{brand} ({model_name})")
+
+    def _analyze_with_anthropic(self, alert: DefenderAlert) -> AIAnalysisReport:
+        """Invokes Anthropic Claude model."""
+        import anthropic
+
+        if self._anthropic_client is None:
+            self._anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+        prompt = self._build_alert_context(alert)
+        system_instruction = SYSTEM_PROMPT + "\nRemember: Output ONLY valid JSON."
+
+        response = self._anthropic_client.messages.create(
+            model=settings.ANTHROPIC_MODEL,
+            max_tokens=4096,
+            temperature=0.2,
+            system=system_instruction,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        content = response.content[0].text or "{}"
+        return self._parse_llm_json_response(content, alert, model_name=f"Claude ({settings.ANTHROPIC_MODEL})")
+
+    def _analyze_with_ollama(self, alert: DefenderAlert) -> AIAnalysisReport:
+        """Invokes local Ollama / OpenAI-compatible endpoint."""
+        from openai import OpenAI
+
+        client = OpenAI(
+            base_url=settings.OLLAMA_BASE_URL,
+            api_key="ollama",
+        )
+        prompt = self._build_alert_context(alert)
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        response = client.chat.completions.create(
+            model=settings.OLLAMA_MODEL,
+            messages=messages,
+            temperature=0.2,
+            response_format={"type": "json_object"}
+        )
+        content = response.choices[0].message.content or "{}"
+        return self._parse_llm_json_response(content, alert, model_name=f"Ollama ({settings.OLLAMA_MODEL})")
 
     def _parse_llm_json_response(self, content: str, alert: DefenderAlert, model_name: str) -> AIAnalysisReport:
         """Parses and sanitizes LLM JSON output into AIAnalysisReport."""

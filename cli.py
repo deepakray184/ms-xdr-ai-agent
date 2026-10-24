@@ -53,9 +53,15 @@ def cmd_test_connection():
     table.add_row("AI Engine Provider", f"[cyan]{settings.LLM_PROVIDER.upper()}[/cyan]")
     table.add_row("LLM Key Configured", "[bold green]YES[/bold green]" if settings.is_llm_configured else "[yellow]No (Using Expert Heuristic Engine)[/yellow]")
     if settings.LLM_PROVIDER == "gemini":
-        table.add_row("Gemini Model", settings.GEMINI_MODEL)
-    elif settings.LLM_PROVIDER in ("openai", "azure_openai"):
-        table.add_row("OpenAI Model", settings.OPENAI_MODEL)
+        table.add_row("Model Name", settings.GEMINI_MODEL)
+    elif settings.LLM_PROVIDER in ("openai", "chatgpt"):
+        table.add_row("Model Name", settings.OPENAI_MODEL)
+    elif settings.LLM_PROVIDER in ("claude", "anthropic"):
+        table.add_row("Model Name", settings.ANTHROPIC_MODEL)
+    elif settings.LLM_PROVIDER in ("azure_openai", "copilot", "ms_copilot"):
+        table.add_row("Deployment", settings.AZURE_OPENAI_DEPLOYMENT)
+    elif settings.LLM_PROVIDER in ("ollama", "local", "custom"):
+        table.add_row("Model Name", settings.OLLAMA_MODEL)
 
     console.print(table)
 
