@@ -51,9 +51,9 @@ async def get_dashboard(request: Request):
     """Renders the main SOC dashboard."""
     conn_status = defender_client.test_connection()
     return templates.TemplateResponse(
-        "dashboard.html",
-        {
-            "request": request,
+        request=request,
+        name="dashboard.html",
+        context={
             "conn_status": conn_status,
             "llm_provider": settings.LLM_PROVIDER,
             "llm_configured": settings.is_llm_configured,

@@ -1,6 +1,6 @@
 """Data models for Microsoft Defender XDR Alerts, Incidents, and AI SOC Analysis."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
@@ -105,5 +105,5 @@ class AIAnalysisReport(BaseModel):
     containment_actions: List[ContainmentAction] = Field(default_factory=list)
     hunting_queries: List[KqlHuntingQuery] = Field(default_factory=list)
     next_steps_for_analyst: List[str] = Field(default_factory=list)
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     model_used: str = "AI SOC Analyst"

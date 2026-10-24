@@ -329,11 +329,12 @@ Raw Evidence Snippets:
                 try:
                     raw_b64 = match.group(1)
                     decoded_bytes = base64.b64decode(raw_b64)
-                    # PowerShell encoded strings are UTF-16LE
+                    if len(decoded_bytes) % 2 != 0:
+                        decoded_bytes = decoded_bytes[:-1]
                     try:
-                        decoded_str = decoded_bytes.decode("utf-16le")
+                        decoded_str = decoded_bytes.decode("utf-16le").replace("\x00", "")
                     except UnicodeDecodeError:
-                        decoded_str = decoded_bytes.decode("utf-8", errors="replace")
+                        decoded_str = decoded_bytes.decode("utf-8", errors="replace").replace("\x00", "")
                     decoded_command_notes.append(f"Decoded Base64 Command: `{decoded_str}`")
                 except Exception:
                     pass

