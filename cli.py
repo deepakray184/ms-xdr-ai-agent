@@ -14,6 +14,7 @@ from config import settings
 from defender_client import DefenderXDRClient
 from ai_analyzer import AISOCAnalyzer
 from remediation import RemediationOrchestrator
+from ir_report_generator import IncidentReportGenerator
 
 console = Console()
 
@@ -199,6 +200,32 @@ def cmd_analyze_alert(alert_id: str):
         console.print()
 
 
+def cmd_generate_report(alert_id: str, ticket_id: str = None, lead_analyst: str = "AI SOC Analyst"):
+    """Generates an official NIST SP 800-61 Incident Response Report."""
+    client = DefenderXDRClient()
+    alert = client.get_alert_by_id(alert_id)
+    if not alert:
+        console.print(f"[bold red]Error: Alert with ID '{alert_id}' not found.[/bold red]")
+        return
+
+    console.print(f"\n[bold yellow]📝 Generating NIST SP 800-61 Incident Response Report for: [cyan]{alert.id}[/cyan]...[/bold yellow]")
+    with console.status("[bold green]Reconstructing incident timeline, formatting forensics & generating reports...[/bold green]"):
+        analyzer = AISOCAnalyzer()
+        report = analyzer.analyze_alert(alert)
+        generator = IncidentReportGenerator()
+        files = generator.save_reports(alert, report, lead_analyst=lead_analyst, ticket_id=ticket_id)
+
+    console.print(Panel(
+        f"[bold green]Incident Response Report successfully compiled and saved![/bold green]\n\n"
+        f"📄 [bold]Markdown Report:[/bold] [cyan]{files['markdown']}[/cyan]\n"
+        f"🌐 [bold]Print-Ready HTML (PDF):[/bold] [cyan]{files['html']}[/cyan]\n"
+        f"💾 [bold]SOAR / SIEM JSON:[/bold] [cyan]{files['json']}[/cyan]\n\n"
+        f"[dim]Tip: You can open the HTML file in any browser and choose 'Print -> Save as PDF' to produce an executive PDF document.[/dim]",
+        title="INCIDENT RESPONSE REPORT GENERATED",
+        border_style="green"
+    ))
+
+
 def interactive_menu():
     """Runs interactive menu loop."""
     display_banner()
@@ -208,10 +235,11 @@ def interactive_menu():
         console.print("  [bold]2[/bold]. List Recent Defender XDR Alerts")
         console.print("  [bold]3[/bold]. Analyze Alert by ID with AI SOC Agent")
         console.print("  [bold]4[/bold]. Generate Emergency Remediation PowerShell Script")
-        console.print("  [bold]5[/bold]. Start Web Dashboard (FastAPI / Browser UI)")
+        console.print("  [bold]5[/bold]. Generate Full Incident Response (IR) Report (NIST SP 800-61)")
+        console.print("  [bold]6[/bold]. Start Web Dashboard (FastAPI / Browser UI)")
         console.print("  [bold]q[/bold]. Quit\n")
 
-        choice = input("Enter choice (1-5, q): ").strip()
+        choice = input("Enter choice (1-6, q): ").strip()
         if choice == "1":
             cmd_test_connection()
         elif choice == "2":
@@ -235,6 +263,12 @@ def interactive_menu():
             else:
                 console.print(f"[red]Alert ID '{alert_id}' not found.[/red]")
         elif choice == "5":
+            alert_id = input("Enter Alert ID for Incident Report: ").strip()
+            if alert_id:
+                ticket_id = input("Enter Ticket / Incident ID (optional, e.g. INC-9941): ").strip() or None
+                lead = input("Enter Lead Analyst Name (optional): ").strip() or "AI SOC Analyst"
+                cmd_generate_report(alert_id, ticket_id=ticket_id, lead_analyst=lead)
+        elif choice == "6":
             console.print("[green]Launching Web Dashboard at http://localhost:8000 ...[/green]")
             import uvicorn
             uvicorn.run("web_dashboard:app", host=settings.HOST, port=settings.PORT, reload=False)
@@ -242,7 +276,7 @@ def interactive_menu():
             console.print("[cyan]Exiting AI SOC Analyst. Goodbye![/cyan]")
             break
         else:
-            console.print("[red]Invalid selection. Please choose 1-5 or q.[/red]")
+            console.print("[red]Invalid selection. Please choose 1-6 or q.[/red]")
 
 
 def main():
@@ -261,6 +295,12 @@ def main():
     analyze_parser = subparsers.add_parser("analyze", help="Analyze a Defender XDR alert with AI")
     analyze_parser.add_argument("alert_id", type=str, help="Alert ID to analyze")
 
+    # report
+    report_parser = subparsers.add_parser("report", help="Generate full NIST SP 800-61 Incident Response report")
+    report_parser.add_argument("alert_id", type=str, help="Alert ID to generate report for")
+    report_parser.add_argument("--ticket", type=str, default=None, help="Optional Ticket/Incident ID reference")
+    report_parser.add_argument("--lead", type=str, default="AI SOC Analyst", help="Lead investigator name")
+
     # web
     subparsers.add_parser("web", help="Launch the Web SOC Dashboard")
 
@@ -273,6 +313,8 @@ def main():
         cmd_list_alerts(top=args.top, severity=args.severity)
     elif args.command == "analyze":
         cmd_analyze_alert(args.alert_id)
+    elif args.command == "report":
+        cmd_generate_report(args.alert_id, ticket_id=args.ticket, lead_analyst=args.lead)
     elif args.command == "web":
         import uvicorn
         console.print(f"[bold green]Starting Defender XDR SOC Web Dashboard on http://{settings.HOST}:{settings.PORT} ...[/bold green]")

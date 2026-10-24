@@ -14,6 +14,7 @@ from config import settings
 from defender_client import DefenderXDRClient
 from ai_analyzer import AISOCAnalyzer
 from remediation import RemediationOrchestrator
+from ir_report_generator import IncidentReportGenerator
 from models import ContainmentAction
 
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +30,7 @@ templates = Jinja2Templates(directory="templates")
 defender_client = DefenderXDRClient()
 ai_analyzer = AISOCAnalyzer()
 remediation_orchestrator = RemediationOrchestrator(defender_client)
+report_generator = IncidentReportGenerator()
 
 
 class AzureTestRequest(BaseModel):
@@ -238,3 +240,55 @@ async def export_markdown_report(alert_id: str):
         md.append(f"- {s}")
 
     return "\n".join(md)
+
+
+@app.get("/api/alerts/{alert_id}/ir-report/html", response_class=HTMLResponse)
+async def get_incident_response_html_report(alert_id: str, ticket_id: Optional[str] = None):
+    """Generates and serves a styled, print-to-PDF NIST SP 800-61 Incident Response report."""
+    alert = defender_client.get_alert_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    report = ai_analyzer.analyze_alert(alert)
+    html_content = report_generator.generate_html(alert, report, ticket_id=ticket_id)
+    return HTMLResponse(content=html_content)
+
+
+@app.get("/api/alerts/{alert_id}/ir-report/markdown", response_class=PlainTextResponse)
+async def get_incident_response_markdown_report(alert_id: str, ticket_id: Optional[str] = None):
+    """Generates NIST SP 800-61 Incident Response report in Markdown."""
+    alert = defender_client.get_alert_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    report = ai_analyzer.analyze_alert(alert)
+    md_content = report_generator.generate_markdown(alert, report, ticket_id=ticket_id)
+    return PlainTextResponse(
+        content=md_content,
+        headers={"Content-Disposition": f"attachment; filename=IR_REPORT_{alert_id}.md"}
+    )
+
+
+@app.get("/api/alerts/{alert_id}/ir-report/json")
+async def get_incident_response_json_report(alert_id: str, ticket_id: Optional[str] = None):
+    """Generates machine-readable DFIR incident response report in JSON."""
+    alert = defender_client.get_alert_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    report = ai_analyzer.analyze_alert(alert)
+    return report_generator.generate_json(alert, report, ticket_id=ticket_id)
+
+
+@app.post("/api/alerts/{alert_id}/ir-report/generate")
+async def save_incident_response_report(alert_id: str, ticket_id: Optional[str] = None):
+    """Generates and saves Markdown, HTML, and JSON reports to disk in incident_reports/."""
+    alert = defender_client.get_alert_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    report = ai_analyzer.analyze_alert(alert)
+    files = report_generator.save_reports(alert, report, ticket_id=ticket_id)
+    return {
+        "success": True,
+        "message": "Incident Response Report generated and saved to disk.",
+        "files": files,
+        "base_name": files["base_name"],
+    }
+

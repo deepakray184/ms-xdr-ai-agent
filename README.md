@@ -15,6 +15,7 @@ The agent connects directly to the **Microsoft Graph Security API v1.0**, ingest
 - **Blast Radius & Threat Story**: Reconstructs the kill chain and evaluates exposed identities, devices, and domain impact.
 - **Automated KQL Hunting Queries**: Generates targeted KQL queries for `DeviceProcessEvents`, `DeviceNetworkEvents`, `DeviceLogonEvents`, and `SigninLogs`.
 - **Containment Orchestration**: Recommends immediate containment actions (Device Isolation, Entra ID session revocation, IOC blocking) and generates emergency PowerShell remediation scripts.
+- **Automated Incident Response (IR) Reports**: Automatically generates enterprise-grade, **NIST SP 800-61 Rev 2** and **SANS DFIR** compliant incident response reports in **Print-Ready HTML (PDF)**, **Markdown (.md)**, and **SOAR-ready JSON**.
 - **Multi-Modal AI Engine**: Supports Google Gemini, OpenAI, Azure OpenAI, and includes a built-in **Expert SOC Heuristic Engine** that runs offline with 0 external API keys required!
 - **Dual Interfaces**: High-speed **Terminal CLI** and a dark-themed **FastAPI SOC Operations Web Dashboard**.
 
@@ -32,6 +33,7 @@ MS XDR AI Agent/
 ├── defender_client.py    # MS Graph Security API client & OAuth2 MSAL handler
 ├── ai_analyzer.py        # AI SOC Analyst engine (Gemini / OpenAI / Heuristics)
 ├── remediation.py        # Containment action execution & PowerShell script generator
+├── ir_report_generator.py # Automated NIST SP 800-61 Incident Response Report generator
 ├── cli.py                # Command-line interface with Rich formatting
 ├── web_dashboard.py      # FastAPI backend for SOC web interface
 ├── templates/
@@ -116,6 +118,12 @@ python cli.py list --severity high
 ### Run AI Investigation on an Alert
 ```bash
 python cli.py analyze da-9821-lsass-dump
+```
+
+### Automatically Generate Full Incident Response (IR) Report
+Generates NIST SP 800-61 Rev 2 compliant reports in Markdown, Print-Ready HTML (Print to PDF), and JSON:
+```bash
+python cli.py report da-9821-lsass-dump --ticket INC-2026-901
 ```
 
 ### Launch Interactive Menu Shell

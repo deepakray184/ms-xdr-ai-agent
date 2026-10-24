@@ -162,9 +162,20 @@
           </div>
         </div>
         <div class="flex items-center space-x-2">
+          <!-- Full IR Report Button -->
+          <a id="btnOpenHtmlReport" href="#" target="_blank" class="px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-lg text-white shadow-sm transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-file-contract"></i>
+            <span>Full IR Report (HTML / PDF)</span>
+          </a>
+          <!-- Save to Disk Button -->
+          <button onclick="saveReportToDisk()" id="btnSaveToDisk" class="px-3 py-1.5 text-xs font-medium bg-soc-800 hover:bg-soc-700 border border-slate-700 rounded-lg text-slate-200 transition flex items-center space-x-1.5" title="Saves Markdown, HTML, and JSON to incident_reports/">
+            <i class="fa-solid fa-hard-drive text-cyan-400"></i>
+            <span>Save to Disk</span>
+          </button>
+          <!-- Download Markdown -->
           <button onclick="downloadReport()" class="px-3 py-1.5 text-xs font-medium bg-soc-800 hover:bg-soc-700 border border-slate-700 rounded-lg text-slate-200 transition flex items-center space-x-1.5">
             <i class="fa-solid fa-download"></i>
-            <span>Export Report (.md)</span>
+            <span>.MD</span>
           </button>
           <button onclick="closeAnalysisModal()" class="w-8 h-8 rounded-lg bg-soc-800 hover:bg-soc-700 flex items-center justify-center text-slate-400 hover:text-white transition">
             <i class="fa-solid fa-xmark"></i>
@@ -399,7 +410,11 @@
                 </div>
               </div>
 
-              <div class="flex items-center space-x-3 self-end md:self-center">
+              <div class="flex items-center space-x-2 self-end md:self-center">
+                <a href="/api/alerts/${alert.id}/ir-report/html" target="_blank" class="px-3 py-2 text-xs font-semibold rounded-lg bg-soc-800 hover:bg-soc-700 border border-slate-700 text-slate-200 transition flex items-center space-x-1.5" title="View Full Incident Response Report">
+                  <i class="fa-solid fa-file-contract text-emerald-400"></i>
+                  <span>IR Report</span>
+                </a>
                 <button onclick="analyzeAlert('${alert.id}')" class="px-4 py-2 text-xs font-bold rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-600/20 transition flex items-center space-x-2">
                   <i class="fa-solid fa-brain"></i>
                   <span>AI Triage & Analyze</span>
@@ -428,6 +443,7 @@
       const loading = document.getElementById('modalLoading');
       const content = document.getElementById('modalContent');
       document.getElementById('modalAlertId').innerText = `Alert ID: ${alertId}`;
+      document.getElementById('btnOpenHtmlReport').href = `/api/alerts/${alertId}/ir-report/html`;
 
       modal.classList.remove('hidden');
       loading.classList.remove('hidden');
@@ -578,7 +594,27 @@
 
     function downloadReport() {
       if (!currentActiveAlertId) return;
-      window.open(`/api/alerts/${currentActiveAlertId}/report.md`, '_blank');
+      window.open(`/api/alerts/${currentActiveAlertId}/ir-report/markdown`, '_blank');
+    }
+
+    async function saveReportToDisk() {
+      if (!currentActiveAlertId) return;
+      const btn = document.getElementById('btnSaveToDisk');
+      const orig = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> Saving...`;
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/alerts/${currentActiveAlertId}/ir-report/generate`, { method: 'POST' });
+        const data = await res.json();
+        btn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Saved to incident_reports/`;
+        alert(`Incident Response Report saved successfully to:\n\n• Markdown: ${data.files.markdown}\n• HTML: ${data.files.html}\n• JSON: ${data.files.json}`);
+        setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3500);
+      } catch (err) {
+        btn.innerHTML = orig;
+        btn.disabled = false;
+        alert("Failed to save report: " + err.message);
+      }
     }
 
     function openAzureModal() {
