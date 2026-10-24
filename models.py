@@ -37,6 +37,7 @@ class EntityType(str, Enum):
     URL = "url"
     MAILBOX = "mailbox"
     APPLICATION = "application"
+    CLOUD_RESOURCE = "cloudResource"
 
 
 class AlertEntity(BaseModel):

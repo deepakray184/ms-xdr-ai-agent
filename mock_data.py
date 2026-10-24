@@ -232,5 +232,57 @@ MOCK_DEFENDER_ALERTS: List[Dict[str, Any]] = [
                 "processId": 5104
             }
         ]
+    },
+    {
+        "id": "sen-4410-keyvault-cryptominer",
+        "providerAlertId": "sentinel-rule-alert-20261024-8831",
+        "incidentId": "inc-48120",
+        "status": "new",
+        "severity": "high",
+        "classification": None,
+        "determination": None,
+        "serviceSource": "microsoftSentinel",
+        "detectionSource": "scheduledAnalyticRule",
+        "category": "Exfiltration",
+        "title": "Microsoft Sentinel: Mass Key Vault secret access followed by unauthorized Azure VM deployment",
+        "description": "Microsoft Sentinel analytic rule detected service principal svc-terraform-deploy accessing 48 secrets in Key Vault 'kv-prod-eastus' from untrusted IP 195.154.122.9, followed immediately by Azure Resource Manager deployment of an unapproved GPU VM 'miner-rig-01' in a non-standard region (West US 3).",
+        "createdDateTime": (now - timedelta(minutes=15)).isoformat(),
+        "lastUpdateDateTime": (now - timedelta(minutes=2)).isoformat(),
+        "recommendedActions": "1. Immediately rotate the compromised Key Vault secrets and service principal credentials.\n2. Deallocate and terminate the rogue Azure Virtual Machine.\n3. Add untrusted IP 195.154.122.9 to conditional access blocklist.",
+        "mitreTechniques": [
+            "T1552.004",  # Unsecured Credentials: Cloud Secrets
+            "T1530",      # Data from Cloud Storage Object
+            "T1496"       # Resource Hijacking (Cryptomining)
+        ],
+        "evidence": [
+            {
+                "@odata.type": "#microsoft.graph.security.userEvidence",
+                "userAccount": {
+                    "accountName": "svc-terraform-deploy",
+                    "domainName": "CONTOSO",
+                    "userPrincipalName": "svc-terraform-deploy@contoso.com"
+                },
+                "roles": ["servicePrincipal", "contributor"]
+            },
+            {
+                "@odata.type": "#microsoft.graph.security.cloudResourceEvidence",
+                "resourceName": "kv-prod-eastus",
+                "resourceType": "Microsoft.KeyVault/vaults",
+                "resourceId": "/subscriptions/sub-9901-prod/resourceGroups/rg-security-prod/providers/Microsoft.KeyVault/vaults/kv-prod-eastus",
+                "cloudProvider": "Azure"
+            },
+            {
+                "@odata.type": "#microsoft.graph.security.cloudResourceEvidence",
+                "resourceName": "miner-rig-01",
+                "resourceType": "Microsoft.Compute/virtualMachines",
+                "resourceId": "/subscriptions/sub-9901-prod/resourceGroups/rg-compute-temp/providers/Microsoft.Compute/virtualMachines/miner-rig-01",
+                "cloudProvider": "Azure"
+            },
+            {
+                "@odata.type": "#microsoft.graph.security.ipEvidence",
+                "ipAddress": "195.154.122.9",
+                "countryCode": "FR"
+            }
+        ]
     }
 ]

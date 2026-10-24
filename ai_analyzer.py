@@ -533,6 +533,96 @@ Raw Evidence Snippets:
                 f"Verify if {primary_user} normally conducts remote administrative tasks on this server."
             ]
 
+        # Scenario 5: Microsoft Sentinel - Cloud Resource Compromise / Key Vault / Cryptomining
+        elif "sentinel" in (alert.service_source or "").lower() or "sentinel" in title_lower or "keyvault" in title_lower or "cryptominer" in title_lower or "miner" in title_lower:
+            verdict = TriageVerdict.TRUE_POSITIVE
+            confidence = 95
+            severity = AlertSeverity.HIGH
+            attack_vector = "Cloud Identity Abuse & Secret Exfiltration leading to Resource Hijacking (Cryptomining)"
+            cloud_res = [e.identifier for e in alert.entities if e.entity_type == EntityType.CLOUD_RESOURCE]
+            cloud_res_str = ", ".join(cloud_res) if cloud_res else "Cloud Resources"
+
+            exec_summary = (
+                f"HIGH SEVERITY (Microsoft Sentinel): Compromised identity '{primary_user}' performed mass secret retrieval from Key Vault "
+                f"and launched unauthorized compute resources ({cloud_res_str}). Immediate credential revocation and cloud asset teardown required."
+            )
+            tech_narrative = (
+                f"Microsoft Sentinel analytic rule detected anomalous API operations initiated by {primary_user} from untrusted IP "
+                f"{ips[0].identifier if ips else 'external IP'}. Telemetry indicates rapid Key Vault secret extraction followed by "
+                f"ARM template deployment of high-cost compute infrastructure. This pattern matches financial resource hijacking / illicit cryptocurrency mining."
+            )
+            blast_radius = f"Cloud Tenant & Azure Subscription. Secrets stored in Key Vault may be compromised, risking databases, APIs, and cloud infrastructure."
+
+            containment_actions.append(ContainmentAction(
+                action="Rotate Service Principal Secret & Revoke Tokens",
+                target_entity=primary_user,
+                priority="Immediate",
+                rationale="Halt ongoing unauthorized API calls and prevent further infrastructure provisioning.",
+                automated_capability=True
+            ))
+            for cr in cloud_res:
+                if "miner" in cr.lower() or "vm" in cr.lower():
+                    containment_actions.append(ContainmentAction(
+                        action="Deallocate & Terminate Rogue Azure VM",
+                        target_entity=cr,
+                        priority="Immediate",
+                        rationale="Stop unauthorized compute resource consumption and potential internal cloud reconnaissance.",
+                        automated_capability=True
+                    ))
+                elif "vault" in cr.lower() or "kv" in cr.lower():
+                    containment_actions.append(ContainmentAction(
+                        action="Restrict Key Vault Firewall to Private Endpoints",
+                        target_entity=cr,
+                        priority="High",
+                        rationale="Prevent external internet access to sensitive encryption keys and secrets.",
+                        automated_capability=True
+                    ))
+
+            hunting_queries.append(KqlHuntingQuery(
+                title="Sentinel Hunting: Audit Key Vault Secret Access Operations",
+                description="Queries AzureDiagnostics to identify all secrets accessed by the actor IP or identity.",
+                table="AzureDiagnostics",
+                query=(
+                    f"AzureDiagnostics\n"
+                    f"| where TimeGenerated >= ago(24h)\n"
+                    f"| where ResourceProvider == 'MICROSOFT.KEYVAULT'\n"
+                    f"| where OperationName in ('SecretGet', 'SecretList', 'KeyGet')\n"
+                    f"| project TimeGenerated, Resource, OperationName, CallerIPAddress, identity_claim_upn_s"
+                )
+            ))
+            hunting_queries.append(KqlHuntingQuery(
+                title="Sentinel Hunting: Audit Rogue Azure VM & ARM Deployments",
+                description="Queries AzureActivity for all virtual machine and resource group deployments in the last 48h.",
+                table="AzureActivity",
+                query=(
+                    f"AzureActivity\n"
+                    f"| where TimeGenerated >= ago(48h)\n"
+                    f"| where OperationNameValue has 'Microsoft.Compute/virtualMachines/write'\n"
+                    f"| where ActivityStatusValue == 'Success'\n"
+                    f"| project TimeGenerated, Caller, CallerIpAddress, ResourceGroup, Resource, ActivitySubstatusValue"
+                )
+            ))
+            hunting_queries.append(KqlHuntingQuery(
+                title="Sentinel Hunting: High-Risk Service Principal Sign-ins",
+                description="Audits AADServicePrincipalSignInLogs for sign-ins from unexpected external IP addresses.",
+                table="AADServicePrincipalSignInLogs",
+                query=(
+                    f"AADServicePrincipalSignInLogs\n"
+                    f"| where TimeGenerated >= ago(7d)\n"
+                    + (f"| where ServicePrincipalName has '{primary_user.split('@')[0]}'\n" if primary_user != "Unknown-User" else "")
+                    + f"| project TimeGenerated, ServicePrincipalName, IPAddress, Location, ResourceDisplayName"
+                )
+            ))
+            fp_indicators = [
+                "Authorized Terraform/Bicep CI/CD deployment pipeline running in a cloud-hosted runner.",
+                "Approved emergency capacity expansion approved in ServiceNow change request."
+            ]
+            next_steps = [
+                "Audit all 48 secrets accessed from the Key Vault and initiate emergency rotation.",
+                "Review Azure Cost Management budget alerts for unexpected cost spikes.",
+                "Enable Sentinel Behavioral Analytics and UEBA on all service principal identities."
+            ]
+
         # Generic / Unknown Alert Fallback
         else:
             verdict = TriageVerdict.SUSPICIOUS

@@ -78,13 +78,14 @@ def cmd_list_alerts(top=10, severity=None):
         console.print("[yellow]No alerts found.[/yellow]")
         return
 
-    table = Table(title=f"Defender XDR Alerts ({len(alerts)} found)", border_style="blue")
-    table.add_column("Alert ID", style="cyan", width=22)
-    table.add_column("Severity", width=12)
-    table.add_column("Title", style="bold white", width=36)
-    table.add_column("Category", width=16)
-    table.add_column("Entities (Host/User)", style="magenta", width=28)
-    table.add_column("Status", width=12)
+    table = Table(title=f"Defender XDR & Sentinel Alerts ({len(alerts)} found)", border_style="blue")
+    table.add_column("Alert ID", style="cyan", width=20)
+    table.add_column("Severity", width=10)
+    table.add_column("Source", width=14)
+    table.add_column("Title", style="bold white", width=34)
+    table.add_column("Category", width=14)
+    table.add_column("Entities", style="magenta", width=24)
+    table.add_column("Status", width=10)
 
     for a in alerts:
         # Severity color
@@ -97,6 +98,12 @@ def cmd_list_alerts(top=10, severity=None):
 
         sev_badge = f"[{sev_color}]{a.severity.value.upper()}[/{sev_color}]"
 
+        source_disp = (
+            "[bold magenta]Sentinel[/bold magenta]"
+            if "sentinel" in (a.service_source or "").lower()
+            else "[cyan]Defender[/cyan]"
+        )
+
         # Summarize primary entities
         entity_strs = [e.identifier.split(".")[0] for e in a.entities[:2]]
         entities_disp = ", ".join(entity_strs) if entity_strs else "None"
@@ -104,6 +111,7 @@ def cmd_list_alerts(top=10, severity=None):
         table.add_row(
             a.id,
             sev_badge,
+            source_disp,
             a.title,
             a.category,
             entities_disp,

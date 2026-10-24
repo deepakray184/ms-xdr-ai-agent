@@ -297,6 +297,20 @@ class DefenderXDRClient:
                     }
                 ))
 
+            # Cloud / Azure Resource (Microsoft Sentinel & Defender for Cloud)
+            elif "cloudResource" in odata_type or "azureResource" in odata_type:
+                res_name = ev.get("resourceName") or ev.get("resourceId") or "Unknown-Cloud-Resource"
+                entities.append(AlertEntity(
+                    entity_type=EntityType.CLOUD_RESOURCE,
+                    identifier=res_name,
+                    details={
+                        "resourceType": ev.get("resourceType"),
+                        "resourceId": ev.get("resourceId"),
+                        "subscriptionId": ev.get("subscriptionId"),
+                        "cloudProvider": ev.get("cloudProvider", "Azure"),
+                    }
+                ))
+
         # Parse MITRE Techniques
         mitre_list: List[MitreTechnique] = []
         for tech in raw.get("mitreTechniques", []):
@@ -353,6 +367,9 @@ class DefenderXDRClient:
             "T1021.002": "SMB/Windows Admin Shares",
             "T1569.002": "Service Execution",
             "T1486": "Data Encrypted for Impact (Ransomware)",
+            "T1552.004": "Unsecured Credentials: Private Keys & Cloud Secrets",
+            "T1530": "Data from Cloud Storage Object",
+            "T1496": "Resource Hijacking (Crypto Mining)",
         }
         return lookup.get(tech_id, f"Technique {tech_id}")
 
@@ -368,5 +385,8 @@ class DefenderXDRClient:
             "T1021.002": "Lateral Movement",
             "T1569.002": "Execution",
             "T1486": "Impact",
+            "T1552.004": "Credential Access",
+            "T1530": "Collection / Exfiltration",
+            "T1496": "Impact",
         }
         return lookup.get(tech_id, "Tactic")

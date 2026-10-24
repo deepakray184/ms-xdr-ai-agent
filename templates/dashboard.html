@@ -127,6 +127,7 @@
         <div class="flex items-center space-x-2">
           <!-- Filter Buttons -->
           <button onclick="filterAlerts('all')" class="filter-btn active-filter px-3 py-1 rounded-lg text-xs font-medium bg-soc-700 text-white transition">All</button>
+          <button onclick="filterAlerts('sentinel')" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-soc-800 text-purple-300 border border-purple-800/60 hover:bg-soc-700 transition"><i class="fa-solid fa-cloud mr-1"></i>Sentinel</button>
           <button onclick="filterAlerts('high')" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-soc-800 text-slate-300 hover:bg-soc-700 transition">High</button>
           <button onclick="filterAlerts('medium')" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-soc-800 text-slate-300 hover:bg-soc-700 transition">Medium</button>
           <button onclick="filterAlerts('low')" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-soc-800 text-slate-300 hover:bg-soc-700 transition">Low</button>
@@ -368,9 +369,16 @@
       `;
 
       try {
-        const url = severity && severity !== 'all' ? `/api/alerts?severity=${severity}` : '/api/alerts';
+        let url = '/api/alerts';
+        if (severity && severity !== 'all' && severity !== 'sentinel') {
+          url = `/api/alerts?severity=${severity}`;
+        }
         const res = await fetch(url);
-        currentAlerts = await res.json();
+        let data = await res.json();
+        if (severity === 'sentinel') {
+          data = data.filter(a => (a.service_source || '').toLowerCase().includes('sentinel'));
+        }
+        currentAlerts = data;
 
         document.getElementById('metricTotalAlerts').innerText = currentAlerts.length;
         document.getElementById('metricHighAlerts').innerText = currentAlerts.filter(a => a.severity.toLowerCase() === 'high').length;
@@ -389,8 +397,13 @@
                 ? 'bg-amber-950/50 text-amber-400 border-amber-800/60' 
                 : 'bg-blue-950/50 text-blue-400 border-blue-800/60');
 
+          const isSentinel = (alert.service_source || '').toLowerCase().includes('sentinel');
+          const sourceBadge = isSentinel 
+            ? '<span class="text-xs px-2 py-0.5 rounded bg-purple-950/70 border border-purple-700/70 text-purple-300 font-semibold flex items-center space-x-1"><i class="fa-solid fa-cloud text-[10px]"></i><span>Microsoft Sentinel</span></span>'
+            : `<span class="text-xs px-2 py-0.5 rounded bg-soc-700/50 text-slate-300">${alert.service_source || 'Defender XDR'}</span>`;
+
           const entitiesHtml = alert.entities.slice(0, 3).map(e => {
-            const icon = e.entity_type === 'device' ? 'fa-desktop' : (e.entity_type === 'user' ? 'fa-user' : 'fa-file-code');
+            const icon = e.entity_type === 'device' ? 'fa-desktop' : (e.entity_type === 'user' ? 'fa-user' : (e.entity_type === 'cloudResource' ? 'fa-cloud' : 'fa-file-code'));
             return `<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-soc-900 border border-slate-700 text-slate-300 font-mono"><i class="fa-solid ${icon} text-[10px] text-cyan-400"></i><span>${e.identifier.split('.')[0]}</span></span>`;
           }).join(' ');
 
@@ -400,7 +413,8 @@
                 <div class="flex items-center space-x-2.5">
                   <span class="px-2.5 py-0.5 text-[11px] font-bold uppercase rounded-md border ${sevBadge}">${alert.severity}</span>
                   <span class="text-xs font-mono text-slate-400">${alert.id}</span>
-                  <span class="text-xs px-2 py-0.5 rounded bg-soc-700/50 text-slate-300">${alert.category || 'General'}</span>
+                  ${sourceBadge}
+                  <span class="text-xs px-2 py-0.5 rounded bg-soc-700/30 text-slate-400">${alert.category || 'General'}</span>
                 </div>
                 <h3 class="text-base font-semibold text-white hover:text-cyan-400 transition cursor-pointer" onclick="analyzeAlert('${alert.id}')">${alert.title}</h3>
                 <p class="text-xs text-slate-400 line-clamp-1">${alert.description || ''}</p>
