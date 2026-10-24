@@ -1,22 +1,28 @@
-# Microsoft Defender XDR AI SOC Agent 🛡️🤖
+# Microsoft Defender XDR & Microsoft Sentinel AI SOC Agent 🛡️🤖
 
-An autonomous AI Security Operations Center (SOC) agent designed for **Microsoft Defender XDR** (Microsoft 365 Defender, Defender for Endpoint, Defender for Identity, and Defender for Cloud Apps).
+An autonomous AI Security Operations Center (SOC) agent designed for **Microsoft Defender XDR** (Endpoint, Identity, Office 365, Cloud Apps) and **Microsoft Sentinel** within the **Unified Security Operations Platform (Unified SecOps)**.
 
-The agent connects directly to the **Microsoft Graph Security API v1.0**, ingests alerts and incidents, performs deep AI analysis (triaging, attack reconstruction, decoding obfuscated commands, MITRE ATT&CK mapping), assesses blast radius, recommends containment playbooks, and generates ready-to-run **KQL (Kusto Query Language) Threat Hunting Queries** for Defender Advanced Hunting and Microsoft Sentinel.
+The agent connects directly to the **Microsoft Graph Security API v1.0**, ingests alerts and incidents across both Defender and Sentinel, performs deep AI analysis (triaging, attack reconstruction, decoding obfuscated commands, MITRE ATT&CK mapping), assesses blast radius, recommends containment playbooks, and generates ready-to-run **KQL (Kusto Query Language) Threat Hunting Queries** and automated **Incident Response Reports (NIST SP 800-61 Rev 2)**.
 
 ---
 
 ## 🚀 Key Capabilities
 
-- **Direct Microsoft Defender XDR Connectivity**: Authenticates to Microsoft Entra ID (Azure AD) via OAuth2 client credentials and queries `/v1.0/security/alerts_v2` and `/v1.0/security/incidents`.
+- **Unified SecOps & Microsoft Sentinel Native**: Authenticates to Microsoft Entra ID (Azure AD) via OAuth2 client credentials and queries `/v1.0/security/alerts_v2` and `/v1.0/security/incidents`. Handles both Defender alerts and Sentinel analytic rules (`microsoftSentinel`).
+- **Multi-LLM Engine**: Plug-and-play support for your preferred AI engine:
+  - 🧠 **Anthropic Claude** (Claude 3.7 Sonnet, Claude 3.5 Sonnet)
+  - 🤖 **OpenAI / ChatGPT** (GPT-4o, o3-mini, o1)
+  - 🏢 **Microsoft Copilot / Azure OpenAI** (Enterprise SecOps deployment)
+  - ⚡ **Google Gemini** (Gemini 2.5 Flash, Pro)
+  - 🏠 **Local & Air-Gapped Models** (Ollama: Llama 3.3, DeepSeek-R1)
+  - 🛡️ **Offline Expert Heuristic SOC Engine** (runs locally with 0 API keys required!)
 - **Automated AI Triaging**: Classifies alerts into **True Positive (Malicious)**, **False Positive**, or **Suspicious**, computing an objective confidence score.
 - **De-obfuscation & Deep Inspection**: Automatically decodes Base64 encoded PowerShell/cmdline arguments, identifies LSASS injection, macro executions, and C2 beacons.
-- **MITRE ATT&CK Mapping**: Maps attacker tactics & techniques (e.g., T1003.001, T1059.001, T1204.002, T1071.001).
-- **Blast Radius & Threat Story**: Reconstructs the kill chain and evaluates exposed identities, devices, and domain impact.
-- **Automated KQL Hunting Queries**: Generates targeted KQL queries for `DeviceProcessEvents`, `DeviceNetworkEvents`, `DeviceLogonEvents`, and `SigninLogs`.
-- **Containment Orchestration**: Recommends immediate containment actions (Device Isolation, Entra ID session revocation, IOC blocking) and generates emergency PowerShell remediation scripts.
+- **MITRE ATT&CK Mapping**: Maps attacker tactics & techniques (e.g., T1003.001, T1059.001, T1204.002, T1071.001, T1552.004, T1496).
+- **Blast Radius & Threat Story**: Reconstructs the kill chain and evaluates exposed identities, devices, cloud resources, and domain impact.
+- **Automated KQL Hunting Queries**: Generates targeted KQL queries for Defender tables (`DeviceProcessEvents`, `DeviceNetworkEvents`) and Sentinel tables (`AzureActivity`, `AzureDiagnostics`, `SigninLogs`).
+- **Containment Orchestration**: Recommends immediate containment actions (Device Isolation, Entra ID session revocation, Key Vault restriction, IOC blocking) and generates emergency PowerShell remediation scripts.
 - **Automated Incident Response (IR) Reports**: Automatically generates enterprise-grade, **NIST SP 800-61 Rev 2** and **SANS DFIR** compliant incident response reports in **Print-Ready HTML (PDF)**, **Markdown (.md)**, and **SOAR-ready JSON**.
-- **Multi-Modal AI Engine**: Supports Google Gemini, OpenAI, Azure OpenAI, and includes a built-in **Expert SOC Heuristic Engine** that runs offline with 0 external API keys required!
 - **Dual Interfaces**: High-speed **Terminal CLI** and a dark-themed **FastAPI SOC Operations Web Dashboard**.
 
 ---
@@ -29,9 +35,9 @@ MS XDR AI Agent/
 ├── .env.example          # Template configuration
 ├── config.py             # Settings manager
 ├── models.py             # Pydantic models (Alerts, MITRE, AI Report)
-├── mock_data.py          # Authentic Defender XDR alert schemas for simulation
+├── mock_data.py          # Authentic Defender XDR & Sentinel alert schemas for simulation
 ├── defender_client.py    # MS Graph Security API client & OAuth2 MSAL handler
-├── ai_analyzer.py        # AI SOC Analyst engine (Gemini / OpenAI / Heuristics)
+├── ai_analyzer.py        # Multi-LLM SOC Analyst (Claude / OpenAI / Copilot / Gemini / Ollama)
 ├── remediation.py        # Containment action execution & PowerShell script generator
 ├── ir_report_generator.py # Automated NIST SP 800-61 Incident Response Report generator
 ├── cli.py                # Command-line interface with Rich formatting
